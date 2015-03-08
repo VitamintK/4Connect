@@ -1,7 +1,8 @@
 import random
-#import numpy
+import time
+import numpy
 
-
+TILES = '#', 'O'
 
 class Board:
     def __init__(self,x,y,winlength, blank = ' '):
@@ -36,7 +37,7 @@ class Board:
             else:
                 return self.blank
 
-    def col_is_full(self,col):
+    def col_is_full(self,col: list):
         if self.blank in col:
             return False
         else:
@@ -74,7 +75,7 @@ class Board:
                 return index
         return False
 
-    def add_piece(self,col_num,piece): #move piece to first parameter
+    def add_piece(self,col_num,piece) -> ('col_num', 'row_num') or False: #move piece to first parameter
         next_space = self.next_space(self.board[col_num])
         if next_space is not False:
             self.board[col_num][next_space] = piece
@@ -143,10 +144,12 @@ class Player:
         if players:
             self.players = players
         self.players.sort(key= lambda x: False if x is self else True)
+    def move(self) -> ('col_num', 'row_num'):
+        pass
 
 
 class Human(Player):
-    def move(self):
+    def move(self) -> ('col_num', 'row_num'):
         while True:
             col = input("which column? ")
             if col == 'q':
@@ -169,7 +172,8 @@ class AI(Player):
     pass
 
 class ShitAI(AI):
-    def move(self):
+    """ShitAI moves in a random column each turn."""
+    def move(self) -> ('col_num', 'row_num'):
         while True:
             col_num = random.randint(0,len(self.board.board)-1)
             if not self.board.col_is_full(self.board.board[col_num]):
@@ -178,7 +182,9 @@ class ShitAI(AI):
                 return self.board.add_piece(col_num, self.value)
 
 class TrashAI(AI):
-    def move(self):
+    """TrashAI moves in a column that it chooses randomly based on
+    a binomial distribution centered at the middle column."""
+    def move(self) -> ('col_num', 'row_num'):
         while True:
             col_num = numpy.random.binomial(len(self.board.board)-1,0.5)
             if not self.board.col_is_full(self.board.board[col_num]):
@@ -187,19 +193,18 @@ class TrashAI(AI):
                 return self.board.add_piece(col_num, self.value)
 
 class DumbAI(AI):
-    def move(self):
+    """DumbAI moves to the space where it either creates the longest line of its own pieces
+    or prevents a longer streak of opponent pieces."""
+    def move(self) -> ('col_num', 'row_num'):
         streaks = [max(x) for x in zip(*[list(self.max_surrounding_streaks(player.value)) for player in self.players])]
         if max(streaks) > 0:
             return self.board.add_piece(streaks.index(max(streaks)), self.value)
         else:
-            while True:
-                col_num = numpy.random.binomial(len(self.board.board)-1,0.5)
-                if not self.board.col_is_full(self.board.board[col_num]):
-                #get col_is_full to accept col num instead?
-                #print ' '*(1 + col_num * 2) + 'V'
-                    return self.board.add_piece(col_num, self.value)
+            return TrashAI.move(self)
 
     def max_surrounding_streaks(self, value = None):
+        """This method iterates through each column. For each column, it finds the next space, and yields
+        an int that represents the largest (amount of pieces of one color in a row through that space)."""
         if value is None:
             value = self.value
         for col_num, col in enumerate(self.board.board):
@@ -214,16 +219,11 @@ class InfantAI(DumbAI):
     It plays like dumbAI (placing its piece where it creates the longest streak of its own pieces
     OR prevents a longer streak of opponent pieces), BUT without as extreme short-sightedness, because
     3yoAI will not place a piece that will allow its opponent to win the game immediately."""
-    def move(self):
+    def move(self) -> ('col_num', 'row_num'):
         streaks = [max(x) for x in zip(*[list(self.max_surrounding_streaks(player.value)) for player in self.players])]
         sorted_streaks = sorted(enumerate(streaks), key = lambda x: x[1], reverse = True) #(index, streak value) ordered by highest value first.
         if sorted_streaks[0][1] <= 0: #CHANGE THIS TO A SUPER CALL FROM SHITAI
-            while True:
-                col_num = numpy.random.binomial(len(self.board.board)-1, 0.5)
-                if not self.board.col_is_full(self.board.board[col_num]):
-                #get col_is_full to accept col num instead?
-                #print ' '*(1 + col_num * 2) + 'V'
-                    return self.board.add_piece(col_num, self.value)
+            return TrashAI.move(self)
         for considered_column in sorted_streaks:
             if considered_column[1] is not False:
                 if (not self.board.next_space(self.board.board[considered_column[0]]) + 1 < len(self.board.board[considered_column[0]])) or (
@@ -243,7 +243,7 @@ class ToddlerAI(InfantAI):
     #5. streaks of n-2 length that are like #3 et ak
     #6. streaks of n-2 length that are like #4 et al.
     # . streaks of n-1 length of my own piece that aren't a streak of at least win_length for [self.value, blank] (?)
-    def move(self):
+    def move(self) -> ('col_num', 'row_num'):
         
         streaks = list(zip(*[list(self.max_surrounding_streaks(player.value)) for player in self.players]))
         sorted_streaks = sorted(enumerate(streaks), key = lambda x: (False, max(x[1]), x[1][0]), reverse = True)
@@ -293,13 +293,14 @@ class ToddlerAI(InfantAI):
 #of all blank spaces and 'x's.
 
 class Game:
-    def __init__(self,x,y,winlen,blank = ' '):
+    def __init__(self,x,y,winlen,blank = ' ', players = [Human, Human], pause = True):
         self.game_board = Board(x,y,winlen, blank= ' ')
-        self.players = [Human('#',self.game_board), ShitAI('O',self.game_board)]
+        self.players = [playerclass(x, self.game_board) for x, playerclass in zip(TILES, players)] 
         for player in self.players:
             player.sort_players(self.players[:])
         self.turnplnum = 0
         self.turnpl = self.players[self.turnplnum]
+        self.pause = pause
         
     def play(self): #make this function better!!!!!
         while True:
@@ -320,6 +321,9 @@ class Game:
                 else:
                     self.turnplnum +=1
                 self.turnpl = self.players[self.turnplnum]
+                if self.pause:
+                    time.sleep(0.7)
+                
         
     def turn(self):
         return self.turnpl.move()
@@ -332,14 +336,22 @@ class Game:
         self.play()
         self.players = oldplayers
         print(self.players)
+
+    def restart(self):
+        self.players = self.players[1:] + [self.players[0]]
+        self.turnplnum = 0
+        self.turnpl = self.players[self.turnplnum]
+        self.game_board.clear()
+        
         
 
-g = Game(7,6,4)
-print(g.play())
+g = Game(7,6,4, players = [Human, DumbAI])
 
-def test(amt):
+def test(amt = 1):
+    g = Game(7,6,4, players = [Human, DumbAI])
     counter = {'#':0, 'O':0, ' ':0}
     for i in range(amt):
-        g.game_board.clear()
+        g.restart()
         counter[g.play()]+=1
     return counter
+
