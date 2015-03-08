@@ -3,7 +3,8 @@
 
 Python framework and UI and AI of gravity-based Connect-Four style games.
 
-*Usage*
+Usage
+========
 
 To create a new game instance, construct a new Game object.
 
@@ -14,9 +15,9 @@ g.play()
 
 The arguments are:
 
-'''
+```
 Game(columns, rows, win_length, (players), (pause))
-'''
+```
 
 columns: width of the board.
 rows: height of the board  
