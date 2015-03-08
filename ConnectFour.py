@@ -250,13 +250,7 @@ class ToddlerAI(InfantAI):
         #(index, (mystreak, oppstreak)) ordered by highest value first, mystreak higher priority than oppstreak.
         print(sorted_streaks)
         if max(sorted_streaks[0][1]) <= 0: #CHANGE THIS TO A SUPER CALL FROM SHITAI
-            while True:
-                col_num = 2
-                #col_num = numpy.random.binomial(len(self.board.board)-1, 0.5)
-                if not self.board.col_is_full(self.board.board[col_num]):
-                #get col_is_full to accept col num instead?
-                #print ' '*(1 + col_num * 2) + 'V'
-                    return self.board.add_piece(col_num, self.value)
+            return TrashAI.move(self)
         for considered_column in sorted_streaks: #todo: clean this up more.  make it more readable.
             if max(considered_column[1]) is not False:
                 if (not self.board.next_space(self.board.board[considered_column[0]]) + 1 < len(self.board.board[considered_column[0]])) or (
@@ -306,6 +300,8 @@ class Game:
         while True:
             print('')
             self.game_board.vis_with_num()
+            if self.pause and not isinstance(self.turnpl, Human):
+                time.sleep(0.7)
             turn_res = self.turn()
             if turn_res == 'quit':
                 break
@@ -315,29 +311,25 @@ class Game:
                 self.game_board.vis_with_num()
                 return winner
             else:
-                newturnplnum = self.turnplnum + 1
-                if newturnplnum >= len(self.players):
-                    self.turnplnum = 0
-                else:
-                    self.turnplnum +=1
-                self.turnpl = self.players[self.turnplnum]
-                if self.pause:
-                    time.sleep(0.7)
-                
-        
+                self.increment_pl()
+
+    def increment_pl(self):
+        self.turnplnum = (self.turnplnum + 1)%len(self.players)
+        self.turnpl = self.players[self.turnplnum]
+
     def turn(self):
         return self.turnpl.move()
-        #return self.game_board.add_piece(col,self.turnpl.value)
 
     def sandbox(self):
         oldplayers = self.players
         print(oldplayers)
-        self.players = [Human('#',self.game_board), Human('O',self.game_board)]
+        self.players = [playerclass(x, self.game_board) for x, playerclass in zip(TILES, [Human, Human])]
+        self.increment_pl()
         self.play()
         self.players = oldplayers
         print(self.players)
 
-    def restart(self):
+    def refresh(self):
         self.players = self.players[1:] + [self.players[0]]
         self.turnplnum = 0
         self.turnpl = self.players[self.turnplnum]
@@ -351,7 +343,7 @@ def test(amt = 1):
     g = Game(7,6,4, players = [Human, DumbAI])
     counter = {'#':0, 'O':0, ' ':0}
     for i in range(amt):
-        g.restart()
+        g.refresh()
         counter[g.play()]+=1
     return counter
 
