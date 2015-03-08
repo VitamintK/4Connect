@@ -1,12 +1,12 @@
 import random
-import numpy
+#import numpy
 
 
 
 class Board:
     def __init__(self,x,y,winlength, blank = ' '):
         self.blank = blank
-        self.board = [[blank for i in xrange(y)] for j in xrange(x)]
+        self.board = [[blank for i in range(y)] for j in range(x)]
         self.winlength = winlength
 
     def clear(self):
@@ -18,10 +18,10 @@ class Board:
         #for column in [list(i) for i in reversed(zip(*self.board))]:
         #    print '|' + ".".join(column) + '|'
 
-        print '\n'.join(['|' + ".".join(column) + '|' for column in [list(i) for i in reversed(zip(*self.board))]])
+        print('\n'.join(['|' + ".".join(column) + '|' for column in [list(i) for i in reversed(list(zip(*self.board)))]]))
     def vis_with_num(self):
         self.visualize()
-        print ' ' + ' '.join([str(x%10) for x in range(len(self.board))]) + ' '
+        print(' ' + ' '.join([str(x%10) for x in range(len(self.board))]) + ' ')
     def is_game_over_with_piece(self,x,y): #or do I make piece a class?
         #bad implementation probably
         piece_value = self.board[x][y]
@@ -148,7 +148,7 @@ class Player:
 class Human(Player):
     def move(self):
         while True:
-            col = raw_input("which column? ")
+            col = input("which column? ")
             if col == 'q':
                 return 'quit'
             try:
@@ -156,12 +156,12 @@ class Human(Player):
                 if col in range(len(self.board.board)):
                     piece = self.board.add_piece(col,self.value)
                     if piece == False:
-                        print "that column is full"
+                        print("that column is full")
                     else:
                         return piece
-                else: print "not a valid column"
+                else: print("not a valid column")
             except ValueError:
-                print "that's not a number.  type 'q' to quit."
+                print("that's not a number.  type 'q' to quit.")
             
             
 
@@ -245,13 +245,14 @@ class ToddlerAI(InfantAI):
     # . streaks of n-1 length of my own piece that aren't a streak of at least win_length for [self.value, blank] (?)
     def move(self):
         
-        streaks = zip(*[list(self.max_surrounding_streaks(player.value)) for player in self.players])
+        streaks = list(zip(*[list(self.max_surrounding_streaks(player.value)) for player in self.players]))
         sorted_streaks = sorted(enumerate(streaks), key = lambda x: (False, max(x[1]), x[1][0]), reverse = True)
         #(index, (mystreak, oppstreak)) ordered by highest value first, mystreak higher priority than oppstreak.
-        print sorted_streaks
+        print(sorted_streaks)
         if max(sorted_streaks[0][1]) <= 0: #CHANGE THIS TO A SUPER CALL FROM SHITAI
             while True:
-                col_num = numpy.random.binomial(len(self.board.board)-1, 0.5)
+                col_num = 2
+                #col_num = numpy.random.binomial(len(self.board.board)-1, 0.5)
                 if not self.board.col_is_full(self.board.board[col_num]):
                 #get col_is_full to accept col num instead?
                 #print ' '*(1 + col_num * 2) + 'V'
@@ -282,7 +283,6 @@ class ToddlerAI(InfantAI):
             return True
         else:
             return False
-        
 
 
 
@@ -295,7 +295,7 @@ class ToddlerAI(InfantAI):
 class Game:
     def __init__(self,x,y,winlen,blank = ' '):
         self.game_board = Board(x,y,winlen, blank= ' ')
-        self.players = [Human('#',self.game_board), ToddlerAI('O',self.game_board)]
+        self.players = [Human('#',self.game_board), ShitAI('O',self.game_board)]
         for player in self.players:
             player.sort_players(self.players[:])
         self.turnplnum = 0
@@ -303,14 +303,14 @@ class Game:
         
     def play(self): #make this function better!!!!!
         while True:
-            print ''
+            print('')
             self.game_board.vis_with_num()
             turn_res = self.turn()
             if turn_res == 'quit':
                 break
             winner = self.game_board.is_game_over_with_piece(*turn_res)
             if winner:
-                print ''
+                print('')
                 self.game_board.vis_with_num()
                 return winner
             else:
@@ -327,19 +327,19 @@ class Game:
 
     def sandbox(self):
         oldplayers = self.players
-        print oldplayers
+        print(oldplayers)
         self.players = [Human('#',self.game_board), Human('O',self.game_board)]
         self.play()
         self.players = oldplayers
-        print self.players
+        print(self.players)
         
 
 g = Game(7,6,4)
-print g.play()
+print(g.play())
 
 def test(amt):
     counter = {'#':0, 'O':0, ' ':0}
-    for i in xrange(amt):
+    for i in range(amt):
         g.game_board.clear()
         counter[g.play()]+=1
     return counter
